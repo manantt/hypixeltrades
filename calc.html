@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title></title>
+<script
+  src="https://code.jquery.com/jquery-3.6.0.min.js"
+  integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+  crossorigin="anonymous"></script>
+<script src="data/recipes.js"></script>
+<script type="text/javascript">
+	
+	$(function(){
+		$.ajax({
+			url: "https://api.hypixel.net/skyblock/bazaar",
+		}).done(function(data) {
+			if(data.success) {
+				console.log(data.products);
+                var trades = {};
+				recipes.forEach(collection => {
+					collection[Object.keys(collection)].forEach(recipe => {
+                        trades[Object.keys(recipe)[0]] = recipeCalc(data.products, recipe, Object.keys(collection)[0]);
+					});
+				});
+                sortTradesByProfit(trades);
+			} else {
+				alert("error");
+			}
+		});
+	});
+
+	function recipeCalc(products, recipe, collection) {
+		var product_key = Object.keys(recipe)[0];
+		var buy_price = 0;
+		var components = [];
+		recipe[product_key].forEach(component => {
+			var component_buy_price = products[component['key']]['sell_summary'][0]['pricePerUnit']/*  + 0.1 */;
+			var component = {
+				"component_key": component['key'],
+				"component_buy_price": component_buy_price,
+				"component_quantity": component['quantity']
+			};
+			components.push(component);
+			component_qua = component['quantity'];
+			buy_price += component_buy_price * component['quantity'];
+		});
+		var sell_price = products[product_key]['buy_summary'][0]['pricePerUnit']/*  - 0.1 */;
+		var sell_volume = products[product_key]['quick_status']['buyVolume'];
+		var profit = (sell_price/buy_price)*100;
+		var per_click = 0;//(sell_price/component_qua - component_buy_price) * 2300;
+        return {
+            "product_key": product_key,
+			"sell_price": sell_price.toFixed(2), 
+			"profit": parseInt(profit),
+			"per_click": parseInt(per_click),
+			"sell_volume": sell_volume,
+			"components": components
+        };
+		//console.error(product_key + ": " + buy_price.toFixed(2) + " -> " + sell_price.toFixed(2) + " (" + parseInt((sell_price/buy_price)*100) + "%)");
+	}
+
+    function sortTradesByProfit(trades) {
+        var sortable = Object.fromEntries(
+            Object.entries(trades).sort(([,a],[,b]) => b.per_click-a.per_click)
+        );
+        
+		//printTable(sortable);
+
+		showTrades([{
+            "product_key": "PRODUCT_KEY",
+			"sell_price": 12001.01, 
+			"profit": 120,
+			"per_click": 13000,
+			"sell_volume": 6000,
+			"components": [
+				{
+					"component_key": "COMPONENT_KEY1",
+					"component_buy_price": 12.1,
+					"component_quantity": 160
+				},
+				{
+					"component_key": "COMPONENT_KEY2",
+					"component_buy_price": 12.1,
+					"component_quantity": 160
+				}
+			]
+        }]);
+    }
+
+	function printTable(trades) {
+		var html = `<thead>
+						<th>Resource</th>	
+						<th>Buy price</th>	
+						<th>Sell price</th>	
+						<th>Profit</th>	
+						<th>Per click</th>	
+		`;
+		Object.keys(trades).forEach(element => {
+            //console.error(element + ": " + trades[element].profit + "%");
+			if(trades[element].profit > 200) {
+				color = "gold";
+			} else if(trades[element].profit > 150) {
+				color = "green";
+			} else if(trades[element].profit > 100) {
+				color = "orange";
+			} else {
+				color = "red";
+			}
+			html += `
+				<tr style="background-color:`+color+`">
+					<td>`+element+`</td>
+					<td>`+trades[element].component_buy_price+`</td>
+					<td>`+trades[element].sell_price+`</td>
+					<td>`+trades[element].profit+`%</td>
+					<td>`+trades[element].per_click+`c</td>
+				</tr>
+			`;
+        });
+		$("#t").html(html);
+	}
+
+	function showTrades(trades) {
+		var html = "";
+		Object.keys(trades).forEach(element => {
+            html += `<div class='trade'>
+						<div class="trade_img"><img></div>
+						<div class="trade_body">
+							<div><div class="product"><h1>` + trades[element].product_key + `</h1> <h2>` + trades[element].sell_price + `</h2></div></div>
+							<div class="components">`;
+			Object.keys(trades[element].components).forEach(component => {					
+				html += 		`<div class="component">
+									<img>` + trades[element].components[component].component_buy_price + ` <span class="quantity">x` + trades[element].components[component].component_quantity + `</span>
+								</div>`;
+			});
+			html += `		</div>
+						</div>
+						<div class="trade_footer">
+							<div class="profit">aaa</div>	
+						</div>
+					</div>`;
+        });
+		$("#trades").html(html);
+	}
+
+    /*
+Tarantula	III	14,291 Coins
+Sand	VII	23,358 Coins
+Dark Oak	VIII	42,114 Coins
+Melon	VII	48,215 Coins
+Spider	VI	49,582 Coins
+Mithril	VI	50,483 Coins
+Skeleton	VIII	52,390 Coins
+Birch	VIII	52,678 Coins
+Acacia	VIII	53,907 Coins
+Cocoa Beans	VII	55,389 Coins
+Jungle	VI	55,697 Coins
+Wheat	IX	60,181 Coins
+Pumpkin	VII	62,990 Coins
+Potato	VII	64,269 Coins
+Carrot	VII	72,872 Coins
+Ice	VIII	78,671 Coins
+Magma Cube	VII	81,261 Coins
+Sugar Cane	VII	82,725 Coins
+Spruce	VII	84,875 Coins
+Chicken	VIII	85,295 Coins
+Cow	VII	88,952 Coins
+End Stone	VIII	88,964 Coins
+    */
+</script>
+<style>
+	body {
+		background: #f2f2f2f2;
+	}
+	#trades {
+		max-width: 400px;
+		box-sizing: border-box;
+	}
+	.trade {
+		background-color: #fff;
+		box-shadow: 0px 0px 5px 1px #00000029;
+		display: flex;
+	}
+	.trade .trade_img {
+		margin: 3px;
+		width: 50px;
+		height: 50px;
+		display: inline-block;
+	}
+	.trade .trade_img img {
+		width: 50px;
+		height: 50px;
+		display: inline-block;
+	}
+	.trade .trade_body {
+		margin: 3px;
+		height: 50px;
+		display: inline-block;
+		min-width: 300px;
+	}
+	.trade .trade_body .product {
+		display: flex;
+		align-items: center;
+	}
+	.trade .trade_body h1 {
+		margin: 0 10px 0 0;
+		font-size: 15px;
+		display: inline-block;
+	}
+	.trade .trade_body h2 {
+		margin: 0;
+		font-size: 15px;
+		display: inline-block;
+		font-weight: normal;
+	}
+	.trade .trade_body div {
+		height: 25px;
+	}
+	.components {
+		display: flex;
+	}
+	.component {
+		display: flex;
+		align-items: center;
+		margin-right: 15px;
+	}
+	.trade .trade_body .component img {
+		height: 25px;
+		width: 25px;
+		margin-right: 3px;
+	}
+	.quantity {
+		color: gray;
+		font-size: 13px;
+		margin-left: 5px;
+	}
+	.trade_footer .profit {
+		background-color: red;
+		padding: 10px;
+		width: 44px;
+	}
+</style>
+</head>
+<body>
+	<div id="trades"></div>
+	<table id="t" style="text-align:center"></table>
+</body>
+</html>
